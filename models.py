@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-
 class Generator(nn.Module):
     def __init__(self, img_size, latent_dim, dim):
         super(Generator, self).__init__()

@@ -6,6 +6,10 @@ from torchvision.utils import make_grid
 from torch.autograd import Variable
 from torch.autograd import grad as torch_grad
 
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from config import GENERATED_IMAGES_FOLDER, CHECKPOINT_FOLDER, RESULTS_FOLDER, TRAINING_IMAGES_CHECKPOINT_FOLDER, INTERNAL_REPRESENTATIONS_FOLDER
+
 
 class Trainer():
     def __init__(self, generator, discriminator, gen_optimizer, dis_optimizer,
@@ -117,7 +121,7 @@ class Trainer():
             # Only update generator every |critic_iterations| iterations
             if self.num_steps % self.critic_iterations == 0:
                 batch_internal_representation = self._generator_train_iteration(data[0])
-                # Save internal representations for the current batch
+                # Store internal representations for the current batch
                 epoch_internal_representations[i] = batch_internal_representation
 
             if i % self.print_every == 0:
@@ -129,8 +133,7 @@ class Trainer():
                     print("G: {}".format(self.losses['G'][-1]))
 
         # Save internal representations for the current epoch to a npy file
-        np.save(f"G_internal_representations_{epoch}.npy", epoch_internal_representations)
-
+        np.save(os.path.join(INTERNAL_REPRESENTATIONS_FOLDER, f"G_internal_representations_{epoch}.npy"), epoch_internal_representations)
 
     def train(self, data_loader, epochs, save_training_gif=True):
         if save_training_gif:
@@ -153,10 +156,17 @@ class Trainer():
                 # Add image grid to training progress
                 training_progress_images.append(img_grid)
                 # Save image grid
-                imageio.imsave('./training_{}_epochs.png'.format(epoch), (img_grid * 255).astype(np.uint8))
+                imageio.imsave(os.path.join(TRAINING_IMAGES_CHECKPOINT_FOLDER, f"{epoch}.png"), (img_grid * 255).astype(np.uint8))
+
+            # Save model checkpoints
+            if epoch % 10 == 0 or epoch == epochs - 1:
+                suffix = "" if epoch == epochs - 1 else f"_{epoch}"
+                torch.save(self.G.state_dict(), os.path.join(CHECKPOINT_FOLDER, f"generator_{suffix}.pth"))
+                torch.save(self.D.state_dict(), os.path.join(CHECKPOINT_FOLDER, f"discriminator{suffix}.pth"))
 
         if save_training_gif:
-            imageio.mimsave('./training_{}_epochs.gif'.format(epochs), [(training_progress_image*255).astype(np.uint8) for training_progress_image in training_progress_images])
+            # Save training progress as gif
+            imageio.mimsave(os.path.join(RESULTS_FOLDER, 'training_{}_epochs.gif'.format(epochs)), [(training_progress_image*255).astype(np.uint8) for training_progress_image in training_progress_images])
 
     def sample_generator(self, num_samples):
         latent_samples = Variable(self.G.sample_latent(num_samples))
@@ -170,3 +180,4 @@ class Trainer():
         _, generated_data = self.sample_generator(num_samples)
         # Remove color channel
         return generated_data.data.cpu().numpy()[:, 0, :, :]
+    
