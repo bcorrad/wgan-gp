@@ -10,15 +10,15 @@ def train(data_loader, checkpoint_folder):
     # data_loader, _ = get_mnist_dataloaders(batch_size=64)
     img_size = (32, 32, 3)
 
-    generator = Generator(img_size=img_size, latent_dim=100, dim=16)
-    discriminator = Discriminator(img_size=img_size, dim=16)
+    generator = Generator(img_size=img_size, latent_dim=100, dim=32)
+    discriminator = Discriminator(img_size=img_size, dim=32)
 
     print(generator)
     print(discriminator)
 
     # Initialize optimizers
     lr = 1e-4
-    betas = (.5, .99)
+    betas = (.5, .999)
     G_optimizer = optim.Adam(generator.parameters(), lr=lr, betas=betas)
     D_optimizer = optim.Adam(discriminator.parameters(), lr=lr, betas=betas)
 
@@ -32,8 +32,11 @@ def train(data_loader, checkpoint_folder):
     torch.save(trainer.D.state_dict(), os.path.join(checkpoint_folder, f'D_checkpoint_{epochs}.pt'))
 
 
-def generate_images(num_samples, checkpoint, generated_images_folder):
-    # Load the model checkpoint
+def generate_images(num_samples, checkpoint_folder, generated_images_folder):
+    # Load the last model checkpoint in the checkpoint folder
+    checkpoints = [f for f in os.listdir(checkpoint_folder) if f.endswith('.pt')]
+    checkpoint = os.path.join(checkpoint_folder, sorted(checkpoints)[-1])
+    
     generator = Generator(img_size=(32, 32, 3), latent_dim=100, dim=16)
     generator.load_state_dict(torch.load(checkpoint))
 
