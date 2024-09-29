@@ -39,20 +39,27 @@ class Generator(nn.Module):
     #     # Return generated image
     #     return self.features_to_image(x)
 
-    def forward(self, input_data):
-        internal_representations = dict()
-        x = input_data
-        for i, layer in enumerate(self.latent_to_features):
-            x = layer(x)
-            internal_representations[f"{i}_{layer.__class__.__name__}"] = x
+    def forward(self, input_data, internal_repr=False):
+        if internal_repr:
+            internal_representations = dict()
+            x = input_data
+            for i, layer in enumerate(self.latent_to_features):
+                x = layer(x)
+                internal_representations[f"{i}_{layer.__class__.__name__}"] = x
 
-        x = x.view(-1, int(8 * self.dim), int(self.feature_sizes[0]), int(self.feature_sizes[1]))
+            x = x.view(-1, int(8 * self.dim), int(self.feature_sizes[0]), int(self.feature_sizes[1]))
+            
+            for i, layer in enumerate(self.features_to_image):
+                x = layer(x)
+                internal_representations[f"{i}_{layer.__class__.__name__}"] = x
+
+            return internal_representations, x
         
-        for i, layer in enumerate(self.features_to_image):
-            x = layer(x)
-            internal_representations[f"{i}_{layer.__class__.__name__}"] = x
-
-        return internal_representations, x
+        else:
+            x = self.latent_to_features(input_data)
+            x = x.view(-1, 8 * self.dim, self.feature_sizes[0], self.feature_sizes[1])
+            
+            return self.features_to_image(x)
 
     def sample_latent(self, num_samples):
         return torch.randn((num_samples, self.latent_dim))

@@ -34,7 +34,7 @@ class Trainer():
         """ """
         # Get generated data
         batch_size = data.size()[0]
-        _, generated_data = self.sample_generator(batch_size)
+        generated_data = self.sample_generator(batch_size)
 
         # Calculate probabilities on real and generated data
         data = Variable(data)
@@ -63,7 +63,7 @@ class Trainer():
 
         # Get generated data
         batch_size = data.size()[0]
-        internal_representations, generated_data = self.sample_generator(batch_size)
+        internal_representations, generated_data = self.sample_latent_generator(batch_size)
 
         # Calculate loss and optimize
         d_generated = self.D(generated_data)
@@ -168,16 +168,23 @@ class Trainer():
             # Save training progress as gif
             imageio.mimsave(os.path.join(RESULTS_FOLDER, 'training_{}_epochs.gif'.format(epochs)), [(training_progress_image*255).astype(np.uint8) for training_progress_image in training_progress_images])
 
-    def sample_generator(self, num_samples):
+    def sample_latent_generator(self, num_samples):
         latent_samples = Variable(self.G.sample_latent(num_samples))
         if self.use_cuda:
             latent_samples = latent_samples.cuda()
         # generated_data = self.G(latent_samples)
-        internal_representations, generated_data = self.G(latent_samples)
+        internal_representations, generated_data = self.G(latent_samples, internal_repr=True)
         return internal_representations, generated_data
+    
+    def sample_generator(self, num_samples):
+        latent_samples = Variable(self.G.sample_latent(num_samples))
+        if self.use_cuda:
+            latent_samples = latent_samples.cuda()
+        generated_data = self.G(latent_samples, internal_repr=False)
+        return generated_data
 
     def sample(self, num_samples):
-        _, generated_data = self.sample_generator(num_samples)
+        generated_data = self.sample_generator(num_samples)
         # Remove color channel
         return generated_data.data.cpu().numpy()[:, 0, :, :]
     
